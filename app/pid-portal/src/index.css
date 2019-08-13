@@ -16,6 +16,12 @@ code {
 
 .leaflet-container {
   height: 100%;
-  width: 80%;
+  width: 100%;
   margin: 0 auto;
+}
+
+.bottomright {
+  position: absolute;
+  bottom: 8px;
+  right: 16px;
 }
