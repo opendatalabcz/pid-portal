@@ -6,16 +6,32 @@
 */
 
 
-const getLastVehiclePosition = (req, res, db) => {
-  db.raw('select vehicle_id, latitude, longitude \
-          FROM vehicle_position vp1 \
-          where order = \
-                      (select max(order) \
-                       from vehicle_position vp2\
-                       where vp1.vehicle_id=vp2.vehicle_id)')
+const getLastVehiclePositions = (req, res, db) => {
+  db.raw('select vehicle_id, latitude, longitude, "timestamp" \
+          FROM "Vehicle_position" vp1 \
+          where "order" = \
+                      (select max("order") \
+                       from "Vehicle_position" vp2\
+                       where vp1.vehicle_id=vp2.vehicle_id);')
     .then(items => {
-      if(items.length){
-        res.json(items)
+      if(items.rows.length > 0){
+        res.json(items.rows)
+      } else {
+        res.json({dataExists: 'false'})
+      }
+    })
+    .catch(err => res.status(400).json({dbError: 'db error'}))
+}
+
+
+const getVehicleHistory = (req, res, db) => {
+  const { vehicle_id } = req.body
+  db.raw('select vehicle_id, latitude, longitude, "timestamp", "order" \
+          FROM "Vehicle_position" \
+          where vehicle_id = {} order by "order" asc'.format(vehicle_id))
+    .then(items => {
+      if(items.rows.length > 0){
+        res.json(items.rows)
       } else {
         res.json({dataExists: 'false'})
       }
@@ -54,7 +70,8 @@ const deleteTableData = (req, res, db) => {
 }
 
 module.exports = {
-  getLastVehiclePosition,
+  getLastVehiclePositions,
+  getVehicleHistory,
   postTableData,
   putTableData,
   deleteTableData

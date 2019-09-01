@@ -49,16 +49,39 @@ export default class CustomComponent extends Component<{}, State> {
   state = {
     zoomLevel : 11,
     markers: [
-      { key: 'marker1', position: [50.0753564, 14.4408661], content: 'Autobus 311' },
+/*      { key: 'marker1', position: [50.0753564, 14.4408661], content: 'Autobus 311' },
       { key: 'marker2', position: [50.2434047, 14.3082469], content: 'Autobus 375' },
       { key: 'marker3', position: [50.0793283, 14.7380869], content: 'Autobus 357' },
       { key: 'marker4', position: [49.9602083, 14.3089336], content: 'Autobus 328' }, //
-      { key: 'marker5', position: [50.1304150, 14.1510050], content: 'Autobus 385' },
+      { key: 'marker5', position: [50.1304150, 14.1510050], content: 'Autobus 385' },*/
     ],
+    items : []
   }
 
+
+  itemsToMarkers(items){
+     var markers = [];
+    items.forEach(item => {
+      markers.push({key : item['vehicle_id'], position : [item['latitude'], item['longitude']], content : item['vehicle_id'] + item['timestamp']});
+    });
+    console.log(markers);
+    this.setState({markers});
+  }
+
+getItems(){
+  console.log('loading items');
+  fetch('http://localhost:3000/getLastVehiclePositions')
+  .then(response => response.json())
+  .then(items => this.itemsToMarkers(items))
+  .catch(err => console.log(err))
+}
+
   componentDidMount() {
-    this.interval = setInterval(() => this.setState({ time: Date.now() }), 1000);
+    this.interval = setInterval(() => {
+      this.setState({ time: Date.now() });
+      this.getItems();
+    }, 20000);
+    
   }
   componentWillUnmount() {
     clearInterval(this.interval);
