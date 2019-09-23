@@ -30,15 +30,27 @@ type MarkerData = {| ...Props, key: string |}
 
 const MyPopupMarker = ({ content, position }: Props) => (
   <Marker position={position} icon={pointerIcon}>
-    <Popup>{content}</Popup>
+    <Popup><p>Linka: {content.vehicle}</p>
+          <p>Timestamp: {content.timestamp}</p>
+    </Popup>
   </Marker>
 )
 
 const MyMarkersList = ({ markers }: { markers: Array<MarkerData> }) => {
-  const items = markers.map(({ key, ...props }) => (
-    <MyPopupMarker key={key} {...props} />
-  ))
-  return <Fragment>{items}</Fragment>
+  if (markers === undefined) 
+  {
+    const items = [];
+    return <Fragment></Fragment>
+  }
+  else
+  {
+    const items = markers.map(({ key, ...props }) => (
+      <MyPopupMarker key={key} {...props} />
+    ))
+    return <Fragment>{items}</Fragment>
+  }
+ 
+  
 }
 
 type State = {
@@ -48,21 +60,14 @@ type State = {
 export default class CustomComponent extends Component<{}, State> {
   state = {
     zoomLevel : 11,
-    markers: [
-/*      { key: 'marker1', position: [50.0753564, 14.4408661], content: 'Autobus 311' },
-      { key: 'marker2', position: [50.2434047, 14.3082469], content: 'Autobus 375' },
-      { key: 'marker3', position: [50.0793283, 14.7380869], content: 'Autobus 357' },
-      { key: 'marker4', position: [49.9602083, 14.3089336], content: 'Autobus 328' }, //
-      { key: 'marker5', position: [50.1304150, 14.1510050], content: 'Autobus 385' },*/
-    ],
-    items : []
+    markers: this.getItems(),
   }
 
 
   itemsToMarkers(items){
      var markers = [];
     items.forEach(item => {
-      markers.push({key : item['vehicle_id'], position : [item['latitude'], item['longitude']], content : item['vehicle_id'] + item['timestamp']});
+      markers.push({key : item['vehicle_id'], position : [item['latitude'], item['longitude']], content : {vehicle: item['vehicle_id'], timestamp : item['timestamp']} });
     });
     console.log(markers);
     this.setState({markers});

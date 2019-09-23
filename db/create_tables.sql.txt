@@ -1,0 +1,223 @@
+-- Table: public."Route"
+
+-- DROP TABLE public."Route";
+
+CREATE TABLE public."Route"
+(
+    route_id integer NOT NULL,
+    vehlicle_type character varying COLLATE pg_catalog."default",
+    CONSTRAINT "Route_pkey" PRIMARY KEY (route_id)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public."Route"
+    OWNER to postgres;
+
+-- Table: public."Route_points"
+
+-- DROP TABLE public."Route_points";
+
+CREATE TABLE public."Route_points"
+(
+    route_id integer NOT NULL,
+    "order" integer,
+    stop_id integer,
+    latitude double precision,
+    longitude double precision,
+    CONSTRAINT "Route_points_pkey" PRIMARY KEY (route_id),
+    CONSTRAINT "Route_points_order_key" UNIQUE ("order")
+,
+    CONSTRAINT "Route_points_route_id_fkey" FOREIGN KEY (route_id)
+        REFERENCES public."Route" (route_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT "Route_points_stop_id_fkey" FOREIGN KEY (stop_id)
+        REFERENCES public."Stop" (stop_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public."Route_points"
+    OWNER to postgres;
+
+
+-- Table: public."Stop"
+
+-- DROP TABLE public."Stop";
+
+CREATE TABLE public."Stop"
+(
+    stop_id integer NOT NULL,
+    name character varying COLLATE pg_catalog."default",
+    CONSTRAINT "Stop_pkey" PRIMARY KEY (stop_id),
+    CONSTRAINT "Stop_stop_id_fkey" FOREIGN KEY (stop_id)
+        REFERENCES public."Tracked_stops" (stop_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public."Stop"
+    OWNER to postgres;
+
+
+-- Table: public."Tracked_routes"
+
+-- DROP TABLE public."Tracked_routes";
+
+CREATE TABLE public."Tracked_routes"
+(
+    user_id integer NOT NULL,
+    route_id integer,
+    CONSTRAINT "Tracked_routes_pkey" PRIMARY KEY (user_id),
+    CONSTRAINT "Tracked_routes_route_id_key" UNIQUE (route_id)
+
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public."Tracked_routes"
+    OWNER to postgres;
+
+
+-- Table: public."Tracked_stops"
+
+-- DROP TABLE public."Tracked_stops";
+
+CREATE TABLE public."Tracked_stops"
+(
+    user_id integer NOT NULL,
+    stop_id integer,
+    CONSTRAINT "Tracked_stops_pkey" PRIMARY KEY (user_id),
+    CONSTRAINT "Tracked_stops_stop_id_key" UNIQUE (stop_id)
+
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public."Tracked_stops"
+    OWNER to postgres;
+
+
+-- Table: public."User"
+
+-- DROP TABLE public."User";
+
+CREATE TABLE public."User"
+(
+    user_id integer NOT NULL,
+    username character varying COLLATE pg_catalog."default",
+    passwd character varying COLLATE pg_catalog."default",
+    CONSTRAINT "User_pkey" PRIMARY KEY (user_id),
+    CONSTRAINT "User_user_id_fkey" FOREIGN KEY (user_id)
+        REFERENCES public."Tracked_routes" (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT "User_user_id_fkey1" FOREIGN KEY (user_id)
+        REFERENCES public."Tracked_stops" (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public."User"
+    OWNER to postgres;
+
+
+-- Table: public."Vehicle"
+
+-- DROP TABLE public."Vehicle";
+
+CREATE TABLE public."Vehicle"
+(
+    vehicle_id integer NOT NULL,
+    route_id integer,
+    CONSTRAINT "Vehicle_pkey" PRIMARY KEY (vehicle_id)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public."Vehicle"
+    OWNER to postgres;
+
+
+
+-- FUNCTION: public.order_increment()
+
+-- DROP FUNCTION public.order_increment();
+
+CREATE FUNCTION public.order_increment()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF 
+AS $BODY$
+DECLARE
+  v_order_inc int := 0;
+BEGIN
+  SELECT MAX("order") + 1 INTO v_order_inc FROM "Vehicle_position" WHERE vehicle_id = NEW.vehicle_id;
+  IF v_order_inc is null THEN
+    NEW.order := 1;
+  ELSE
+    NEW.order := v_order_inc;
+  END IF;
+RETURN NEW;
+END;
+$BODY$;
+
+ALTER FUNCTION public.order_increment()
+    OWNER TO postgres;
+
+
+
+-- Table: public."Vehicle_position"
+
+-- DROP TABLE public."Vehicle_position";
+
+CREATE TABLE public."Vehicle_position"
+(
+    latitude double precision,
+    longitude double precision,
+    "timestamp" timestamp without time zone,
+    speed integer,
+    calculated_delay integer,
+    bearing integer,
+    vehicle_id character varying(20) COLLATE pg_catalog."default",
+    "order" integer NOT NULL DEFAULT nextval('"Vehicle_position_order_seq"'::regclass)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public."Vehicle_position"
+    OWNER to postgres;
+
+-- Trigger: trg_category_increment
+
+-- DROP TRIGGER trg_category_increment ON public."Vehicle_position";
+
+CREATE TRIGGER trg_category_increment
+    BEFORE INSERT
+    ON public."Vehicle_position"
+    FOR EACH ROW
+    EXECUTE PROCEDURE public.order_increment();
