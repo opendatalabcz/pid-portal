@@ -23,7 +23,7 @@ const morgan = require('morgan') // logs requests
 var db = require('knex')({
   client: 'pg',
   connection: {
-    host : 'localhost',
+    host : '10.0.0.4',
     user : 'postgres',
     password : 'passwd',
     database : 'pid-portal'
@@ -55,7 +55,12 @@ app.use(morgan('combined')) // use 'tiny' or 'combined'
 // App Routes - Auth
 app.get('/', (req, res) => res.send('hello world'))
 app.get('/getLastVehiclePositions', (req, res) => main.getLastVehiclePositions(req, res, db))
-app.get('/getVehicleHistory', (req, res) => main.getVehicleHistory(req, res, db))
+app.get('/getVehicleHistory/:vehicle_id', (req, res) => main.getVehicleHistory(req, res, db))
+app.get('/getRouteForTrip/:trip_id', (req, res) => main.getRouteForTrip(req, res, db))
+app.get('/getRoute/:route_id', (req, res) => main.getRoute(req, res, db))
+app.get('/getStop/:stop_id', (req, res) => main.getStop(req, res, db))
+app.get('/getStopForTrip/:trip_id', (req, res) => main.getStopForTrip(req, res, db))
+app.get('/getVehicleInfo/:vehicle_id', (req, res) => main.getVehicleInfo(req, res, db))
 //app.put('/crud', (req, res) => main.putTableData(req, res, db))
 //app.delete('/crud', (req, res) => main.deleteTableData(req, res, db))
 
