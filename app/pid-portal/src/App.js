@@ -144,25 +144,6 @@ export default class CustomComponent extends Component<{}, State> {
     console.log(`Clicked at`)
   }
 
-
-
-
-/*
-  {
-    route_id: 'L2',
-    order: '1',
-    distance: 0,
-    latitude: 50.09397,
-    longitude: 14.33671,
-    stop_id: '',
-    trip_id: '2_68_190902',
-    shape_id: 'L1V1',
-    direction: true,
-    bikes_allowed: false,
-    headsign: 'Sídliště Petřiny'
-  },
-*/
-
   processRoute(route_points){
     var route = [];
 
@@ -185,16 +166,6 @@ export default class CustomComponent extends Component<{}, State> {
   }
   
 
-  /*
-    {
-    name: 'příměstské linky PID',
-    latitude: 50.12539,
-    longitude: 14.51575,
-    zone_id: '',
-    wheelchair_acc: false,
-    stop_id: 'U1000S1E12'
-  }
-  */ 
   addStopOnMap(stop){
     var stops = this.state.stops;
     if(stop.length === 1)
