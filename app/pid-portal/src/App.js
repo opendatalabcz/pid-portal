@@ -2,13 +2,16 @@
 // @flow
 
 import React, { Component, Fragment } from 'react'
-import { Map, TileLayer, Marker, Popup, Polyline} from 'react-leaflet'
+import { Map, TileLayer, Marker, Popup, Polyline, LayerGroup} from 'react-leaflet'
 import L from 'leaflet'
 
 
 var invisible_style = {
-  display:'none'
+  display:'none',
+  "opacity":0
 };
+
+var visible_style = {};
 
 export const pointerIcon = new L.Icon({
   iconUrl: require('./assets/icon.svg'),
@@ -48,6 +51,7 @@ type MarkerData = {| ...Props, key: string |}
 type State = {
   markers: Array<MarkerData>,
   stops: Array<MarkerData>,
+  selectedPosition: MarkerData
 }
 
 export default class CustomComponent extends Component<{}, State> {
@@ -55,7 +59,11 @@ export default class CustomComponent extends Component<{}, State> {
     zoomLevel : 11,
     markers: this.getItems(),
     route: [],
-    stops: []
+    stops: [],
+    selectedPosition : "",
+    vehicleMarkerStyle : visible_style,
+    stopMarkerStyle : invisible_style,
+    routeMarkerStyle: invisible_style
   }
 
   VehicleMarkersList = ({ markers }: { markers: Array<MarkerData> }) => {
@@ -86,15 +94,6 @@ export default class CustomComponent extends Component<{}, State> {
       </Popup>
     </Marker>
   )
-
-  handleClick = event => {
-    var popup = event.originalEvent.currentTarget.textContent;
-    var trip_id = popup.match(/(?:"[^"]*"|^[^"]*$)/)[0].replace(/"/g, "");
-    this.getRoute(trip_id);
-
-
-    console.log(`Clicked at`)
-  }
 
   itemsToMarkers(items){
      var markers = [];
@@ -138,8 +137,14 @@ export default class CustomComponent extends Component<{}, State> {
   handleClick = event => {
     var popup = event.originalEvent.currentTarget.textContent;
     var trip_id = popup.match(/(?:"[^"]*"|^[^"]*$)/)[0].replace(/"/g, "");
+    
+    var vehicleMarkerStyle = invisible_style;
+    var stopMarkerStyle = visible_style;
+    var routeMarkerStyle = visible_style;
     this.getRoute(trip_id);
+    this.getStops(trip_id);
 
+    this.setState({vehicleMarkerStyle, stopMarkerStyle, routeMarkerStyle});
 
     console.log(`Clicked at`)
   }
@@ -149,30 +154,25 @@ export default class CustomComponent extends Component<{}, State> {
 
     route_points.forEach(point => {
       route.push([point['latitude'], point['longitude']])
-      if(point['stop_id'] !== '')
-      {
-        this.getStop(point['stop_id']);
-      }
     })
     this.setState({route})
   }
 
-  getStop(stop_id){
+  getStops(stop_id){
     console.log('loading stop')
-    fetch('http://localhost:3000/getStop/' + stop_id
+    fetch('http://localhost:3000/getStopForTrip/' + stop_id
   ).then(response => response.json())
-  .then(items => this.addStopOnMap(items))
+  .then(items => this.addStopsOnMap(items))
   .catch(err => console.log(err))
   }
   
 
-  addStopOnMap(stop){
-    var stops = this.state.stops;
-    if(stop.length === 1)
+  addStopsOnMap(stop_json){
+    var stops = [];
+    stop_json.forEach(stop =>
     {
-      var oneStop = stop[0];
-      stops.push( {key : oneStop['stop_id'], position : [oneStop['latitude'], oneStop['longitude']], content : {name : oneStop['name'], zone_id : oneStop['zone_id'], wheelchair_acc : oneStop['wheelchair_acc']}} )
-    }
+      stops.push( {key : stop['stop_id'], position : [stop['latitude'], stop['longitude']], content : {name : stop['name'], zone_id : stop['zone_id'], wheelchair_acc : stop['wheelchair_acc']}} )
+    });
     this.setState({stops});
   }
 
@@ -206,7 +206,10 @@ getItems(){
   handlePopupClose = (e) => {
     var stops = []
     var route = []
-    this.setState({stops, route})
+    var vehicleMarkerStyle = visible_style;
+    var stopMarkerStyle = invisible_style;
+    var routeMarkerStyle = invisible_style;
+    this.setState({stops, route, vehicleMarkerStyle, stopMarkerStyle, routeMarkerStyle})
   }
 
   render() {
@@ -216,9 +219,14 @@ getItems(){
           attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <this.VehicleMarkersList markers={this.state.markers} />
-        <this.StopMarkersList markers={this.state.stops} />
-        <Polyline color="lime" positions={this.state.route} />
+        <LayerGroup style={this.state.vehicleMarkerStyle}>
+        <this.VehicleMarkersList markers={this.state.markers}  />
+        </LayerGroup>
+        <LayerGroup style={this.state.stopMarkerStyle}>
+        <this.StopMarkersList markers={this.state.stops}  />
+        <Polyline color="lime" positions={this.state.route}  style={this.state.routeMarkerStyle}/>
+        </LayerGroup>
+
       </Map>
     )
   }

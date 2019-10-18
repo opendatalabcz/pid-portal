@@ -101,11 +101,10 @@ const getStop = (req, res, db) => {
 
 const getStopForTrip = (req, res, db) => {
   const { trip_id } = req.params
-  db.raw('select stop_id \
-  FROM "Route" as a join "Trip" as b on a.route_id=b.shape_id \
-  where trip_id = \'' + trip_id + '\'\ and stop_id <> \'\' \
-  ORDER BY (CASE WHEN direction THEN "order" END) ASC, \
-             "order" DESC')
+  db.raw('select * \
+  FROM "stop_time" as a join "Stop" as b on a.stop_id=b.stop_id \
+  where trip_id = \'' + trip_id + '\'\ \
+  ORDER BY "sequence" ASC')
     .then(items => {
       if(items.rows.length > 0){
         res.json(items.rows)
