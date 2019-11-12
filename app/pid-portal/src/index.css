@@ -12,7 +12,7 @@ code {
     monospace;
 }
 
-#root {height: 1080px;}
+#root {height: 100vh;}
 
 .leaflet-container {
   height: 100%;
@@ -25,3 +25,5 @@ code {
   bottom: 8px;
   right: 16px;
 }
+
+

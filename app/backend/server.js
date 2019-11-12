@@ -23,7 +23,7 @@ const morgan = require('morgan') // logs requests
 var db = require('knex')({
   client: 'pg',
   connection: {
-    host : '10.0.0.7',
+    host : '10.0.0.3',
     user : 'postgres',
     password : 'passwd',
     database : 'pid-portal'

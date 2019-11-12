@@ -4,6 +4,8 @@
 import React, { Component, Fragment } from 'react'
 import { Map, TileLayer, Marker, Popup, Polyline, LayerGroup} from 'react-leaflet'
 import L from 'leaflet'
+import Dock from 'react-dock'
+import { Button, Tooltip } from 'react-bootstrap'
 
 
 var invisible_style = {
@@ -56,24 +58,31 @@ type State = {
 
 export default class CustomComponent extends Component<{}, State> {
   state = {
+    mapCenter : [50.0753564, 14.4408661],
     zoomLevel : 11,
     markers: this.getItems(),
     route: [],
     stops: [],
     selectedPosition : "",
-    vehicleMarkerStyle : visible_style,
-    stopMarkerStyle : invisible_style,
-    routeMarkerStyle: invisible_style
+    dockVisible: false,
+    vehiclesHidden : false,
+    selected_trip : ""
   }
 
-  VehicleMarkersList = ({ markers }: { markers: Array<MarkerData> }) => {
-    if (markers === undefined) 
+  VehicleMarkersList = ({ markers, hidden, selected }: { markers: Array<MarkerData>, hidden : Boolean, selected : string }) => {
+    if (markers === undefined ) 
     {
       const items = [];
       return <Fragment></Fragment>
     }
     else
     {
+      if(hidden)
+      {
+        markers = markers.filter((elem) => {
+          return elem.content.trip === selected
+        });
+      }
       const items = markers.map(({ key, ...props }) => (
         <this.VehiclePopupMarker key={key} {...props} />
       ))
@@ -82,8 +91,8 @@ export default class CustomComponent extends Component<{}, State> {
   }
 
   VehiclePopupMarker = ({ content, position }: Props) => (
-    <Marker position={position} icon={pointerIcon} onClick={this.handleClick} >
-      <Popup>
+    <Marker position={position} icon={pointerIcon} onClick={this.handleClick} trip_id={content.trip}>
+      <Tooltip>
         <p style={invisible_style}> trip_id:"{content.trip}" </p>
         <p>Linka : {content.route_id}</p>
         <p>Bus: {content.vehicle}</p>
@@ -91,7 +100,7 @@ export default class CustomComponent extends Component<{}, State> {
         <p>Rychlost : {content.speed} km/h</p>
         
             <p>Timestamp: {content.timestamp}</p>
-      </Popup>
+      </Tooltip>
     </Marker>
   )
 
@@ -123,31 +132,14 @@ export default class CustomComponent extends Component<{}, State> {
   StopPopupMarker = ({ content, position }: Props) => (
     <Marker position={position} icon={StopIcon}>
       <Popup>
-        <p style={invisible_style}> trip_id:"{content.trip}" </p>
-        <p>Linka : {content.route_id}</p>
-        <p>Bus: {content.vehicle}</p>
-        <p>Vypočítané zpoždění : {content.calc_delay} minut </p>
-        <p>Rychlost : {content.speed} km/h</p>
-        
-            <p>Timestamp: {content.timestamp}</p>
+        <p>Název : {content.name}</p>
+        <p>Bezbariérová: {content.wheelchair_acc ? "Ano" : "Ne"}</p>
+        <p>Zóna : {content.zone_id}</p>
       </Popup>
     </Marker>
   )
 
-  handleClick = event => {
-    var popup = event.originalEvent.currentTarget.textContent;
-    var trip_id = popup.match(/(?:"[^"]*"|^[^"]*$)/)[0].replace(/"/g, "");
-    
-    var vehicleMarkerStyle = invisible_style;
-    var stopMarkerStyle = visible_style;
-    var routeMarkerStyle = visible_style;
-    this.getRoute(trip_id);
-    this.getStops(trip_id);
 
-    this.setState({vehicleMarkerStyle, stopMarkerStyle, routeMarkerStyle});
-
-    console.log(`Clicked at`)
-  }
 
   processRoute(route_points){
     var route = [];
@@ -203,31 +195,56 @@ getItems(){
     clearInterval(this.interval);
   }
 
+  handleClick = event => {
+
+    var mapCenter = event.target.options.position;
+    var selected_trip = event.target.options.trip_id;
+    var vehiclesHidden = true;
+    var dockVisible = this.state.dockVisible; 
+    if(dockVisible === true)
+    {
+      dockVisible = false;
+      this.setState({dockVisible});
+    }
+    dockVisible = true;
+    this.getRoute(selected_trip);
+    this.getStops(selected_trip);
+
+    this.setState({dockVisible, vehiclesHidden, selected_trip, mapCenter});
+
+    console.log(`Clicked at`)
+  }
+
+
   handlePopupClose = (e) => {
     var stops = []
     var route = []
-    var vehicleMarkerStyle = visible_style;
-    var stopMarkerStyle = invisible_style;
-    var routeMarkerStyle = invisible_style;
-    this.setState({stops, route, vehicleMarkerStyle, stopMarkerStyle, routeMarkerStyle})
+    var dockVisible = false;
+    var vehiclesHidden = false;
+    var selected_trip = "";
+    this.setState({stops, route, dockVisible, vehiclesHidden, selected_trip})
   }
 
   render() {
     return (
-      <Map center={[50.0753564, 14.4408661]} zoomControl={false} zoom={this.state.zoomLevel} onPopupClose={this.handlePopupClose}>
+      <Map center={this.state.mapCenter} zoomControl={false} zoom={this.state.zoomLevel}>
         <TileLayer
           attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <LayerGroup style={this.state.vehicleMarkerStyle}>
-        <this.VehicleMarkersList markers={this.state.markers}  />
+        <LayerGroup>
+        <this.VehicleMarkersList markers={this.state.markers} hidden={this.state.vehiclesHidden} selected={this.state.selected_trip}  />
         </LayerGroup>
-        <LayerGroup style={this.state.stopMarkerStyle}>
+        <LayerGroup >
         <this.StopMarkersList markers={this.state.stops}  />
-        <Polyline color="lime" positions={this.state.route}  style={this.state.routeMarkerStyle}/>
+        <Polyline color="lime" positions={this.state.route}  />
         </LayerGroup>
-
+        <Dock position='bottom' isVisible={this.state.dockVisible} dimMode='none'>
+          {/* you can pass a function as a child here */}
+          <Button variant="danger" style={{float: 'right'}} onClick={this.handlePopupClose}>X</Button>
+        </Dock>
       </Map>
+
     )
   }
 }
