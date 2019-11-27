@@ -23,7 +23,7 @@ const morgan = require('morgan') // logs requests
 var db = require('knex')({
   client: 'pg',
   connection: {
-    host : '10.0.0.3',
+    host : 'localhost',
     user : 'postgres',
     password : 'passwd',
     database : 'pid-portal'
@@ -37,7 +37,7 @@ const main = require('./controllers/main')
 const app = express()
 
 // App Middleware
-const whitelist = ['http://localhost:3001']
+const whitelist = ['http://localhost:3001', 'http://10.79.3.57:3001']
 const corsOptions = {
   origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1 || !origin) {
