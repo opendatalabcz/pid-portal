@@ -47,7 +47,7 @@ var visible_style = {};
 export const pointerIcon = new L.Icon({
   iconUrl: require('./assets/bus.svg'),
   iconRetinaUrl: require('./assets/bus.svg'),
-  iconAnchor: [5, 55],
+  iconAnchor: [10, 18],
   popupAnchor: [10, -44],
   iconSize: [20, 36]
   //shadowUrl: '../assets/marker-shadow.png',
@@ -58,7 +58,7 @@ export const pointerIcon = new L.Icon({
 export const StopIcon = new L.Icon({
   iconUrl: require('./assets/bus-stop.svg'),
   iconRetinaUrl: require('./assets/bus-stop.svg'),
-  iconAnchor: [5, 55],
+  iconAnchor: [0, 54],
   popupAnchor: [10, -44],
   iconSize: [30, 54]
   //shadowUrl: '../assets/marker-shadow.png',
@@ -295,6 +295,7 @@ export default class CustomComponent extends Component<{}, State> {
     var mapCenter = event.target.options.position;
     var selected_trip = event.target.options.trip_id;
     var vehiclesHidden = true;
+    
     var dockVisible = this.state.dockVisible;
     if (dockVisible === true) {
       dockVisible = false;
@@ -304,7 +305,7 @@ export default class CustomComponent extends Component<{}, State> {
     this.getRoute(selected_trip);
     this.getStops(selected_trip);
 
-    this.setState({ dockVisible, vehiclesHidden, selected_trip, mapCenter });
+    this.setState({ dockVisible, vehiclesHidden, selected_trip, mapCenter, zoomLevel:15 });
 
     console.log(`Clicked at`)
   }
@@ -316,7 +317,7 @@ export default class CustomComponent extends Component<{}, State> {
     var dockVisible = false;
     var vehiclesHidden = false;
     var selected_trip = "";
-    this.setState({ stops, route, dockVisible, vehiclesHidden, selected_trip })
+    this.setState({ stops, route, dockVisible, vehiclesHidden, selected_trip, zoomLevel:11 })
   }
 
   render() {
