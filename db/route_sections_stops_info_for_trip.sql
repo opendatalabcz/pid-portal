@@ -1,0 +1,1 @@
+select *, (select count(*) from "Route_sections" where trip_id = '432_32_190429') as stops_cnt from "Route_sections" where trip_id = '432_32_190429' and destination='U1496Z1'

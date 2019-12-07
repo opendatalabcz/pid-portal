@@ -3,10 +3,8 @@ var rp = require('request-promise');
 
 rp({
     method: 'GET',
-    uri: 'http://localhost:3000/getStopForTrip',
-    body: {
-        trip_id : "2_68_190902"
-    },
+    uri: 'http://localhost:3000/getTripStats/353_152_190318'
+,
     json: true // Automatically stringifies the body to JSON
 }).then(function (parsedBody) {
         console.log(parsedBody);

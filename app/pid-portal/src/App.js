@@ -7,35 +7,12 @@ import L from 'leaflet'
 import Dock from 'react-dock'
 import { Button, Tooltip, Container, ListGroup, Col, Row, Table } from 'react-bootstrap'
 import {
-  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as Tooltip_rechart, Legend,
+  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as Tooltip_rechart, Legend, Label
 } from 'recharts';
 import MarkerClusterGroup from 'react-leaflet-markercluster';
+import { isEmptyStatement } from '@babel/types'
 
-
-const data = [
-  {
-    name: 'Pondělí', delay: 5,
-  },
-  {
-    name: 'Úterý', delay: 10,
-  },
-  {
-    name: 'Středa', delay: 25,
-  },
-  {
-    name: 'Čtvrtek', delay: 70,
-  },
-  {
-    name: 'Pátek', delay: 8,
-  },
-  {
-    name: 'Sobota', delay: 11,
-  },
-  {
-    name: 'Neděle', delay: 0,
-  },
-];
-
+const host = "10.0.0.5";
 
 var invisible_style = {
   display: 'none',
@@ -95,7 +72,11 @@ export default class CustomComponent extends Component<{}, State> {
     selectedPosition: "",
     dockVisible: false,
     vehiclesHidden: false,
-    selected_trip: ""
+    selected_trip: "",
+    selected_trip_data : {},
+    selected_trip_stops : {},
+    selected_trip_stats : [],
+    selected_trip_vehicle : {}
   }
 
   VehicleMarkersList = ({ markers, hidden, selected }: { markers: Array<MarkerData>, hidden: Boolean, selected: string }) => {
@@ -161,6 +142,9 @@ export default class CustomComponent extends Component<{}, State> {
     <Marker position={position} icon={StopIcon}>
       <Popup>
         <p>Název : {content.name}</p>
+        <p>Čas příjezdu: {content.arival_time}</p>
+        <p>Čas odjezdu: {content.departure_time}</p>
+        <p>Průmerné zpoždění: {content.avg_delay===null ? "Chybí data" : content.avg_delay}</p>
         <p>Bezbariérová: {content.wheelchair_acc ? "Ano" : "Ne"}</p>
         <p>Zóna : {content.zone_id}</p>
       </Popup>
@@ -171,49 +155,64 @@ export default class CustomComponent extends Component<{}, State> {
     <Container>
       <Row>
       <Col>
-      <ListGroup>
+      <ListGroup variant="flush">
         <ListGroup.Item as="li">Prev Stop</ListGroup.Item>
-        <ListGroup.Item as="li" active>Current Stop</ListGroup.Item>
+  <ListGroup.Item as="li" active>{this.state.selected_trip_data.next_stop_id !== undefined ? this.state.selected_trip_data.next_stop_id : ""}</ListGroup.Item>
         <ListGroup.Item as="li">Next Stop</ListGroup.Item>
       </ListGroup>
       </Col>
-      <Col>
-      <Table striped bordered hover>
+      <Col xs={4}>
+      <Table responsive striped bordered size="sm" responsive="sm" >
       <tbody>
+      <tr>
+      <td>Trip id (to be deleted)</td>
+  <td>{this.state.selected_trip_data.trip_id !== undefined ? this.state.selected_trip_data.trip_id : "Chybí data"}</td>
+    </tr>
     <tr>
       <td>Linka</td>
-      <td>428</td>
+  <td>{this.state.selected_trip_data.route_id !== undefined ? this.state.selected_trip_data.route_id : "Chybí data"}</td>
     </tr>
     <tr>
       <td>Aktuální zpoždění</td>
-      <td>10 minut</td>
+      <td>{this.state.selected_trip_data.calculated_delay !== undefined ? this.state.selected_trip_data.calculated_delay : "Chybí data"} minut</td>
+    </tr>
+    <tr>
+      <td>Aktuální rychlost</td>
+      <td>{this.state.selected_trip_data.speed !== undefined ? this.state.selected_trip_data.speed : "Chybí data"} km/h</td>
+    </tr>
+    <tr>
+      <td>Čas záznamu</td>
+      <td>{this.state.selected_trip_data.timestamp !== undefined ? this.state.selected_trip_data.timestamp : "Chybí data"}</td>
     </tr>
     <tr>
       <td>Provozovatel</td>
-      <td>ČSAD</td>
+      <td>{this.state.selected_trip_data.agency !== undefined ? this.state.selected_trip_data.agency : "Chybí data"}</td>
     </tr>
     <tr>
-      <td>Vozidlo</td>
-      <td>123465</td>
+      <td>Typ vozidla</td>
+      <td>{this.state.selected_trip_data.vehicle_type !== undefined ? "Autobus" : "Chybí data"}</td>
     </tr>
     <tr>
-      <td>Bezbariérová</td>
-      <td>Ano</td>
+      <td>Zrušená jízda</td>
+      <td>{this.state.selected_trip_data.calculated_delay !== undefined ? this.state.selected_trip_data.is_canceled ? "Ano" : "Ne" : "Ne"}</td>
     </tr>
     </tbody>
         </Table>      
       </Col>
-      <Col>
-      <BarChart width={600} height={250} data={data}
+      <Col xs={6}>
+      <BarChart width={600} height={250} data={this.state.selected_trip_stats}
             margin={{top: 5, right: 30, left: 20, bottom: 5}}>
        <CartesianGrid strokeDasharray="3 3"/>
-       <XAxis dataKey="name"/>
+       <XAxis dataKey="name">
+         
+         </XAxis>
        <YAxis/>
-       <Tooltip_rechart/>
+       <Tooltip_rechart formatter={(value) => this.minuteFormater(value)} />
        <Legend />
-       <Bar dataKey="delay" label={{ position: 'top' }} >
+
+       <Bar dataKey="delay" name='Zpoždění během týdne' label={{ position: 'top'}} formatter={(value) => this.minuteFormater(value)} >
        {
-            data.map((entry, index) => (
+            this.state.selected_trip_stats.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={this.getColorByValue(entry.delay)}/>
             ))
           }
@@ -223,6 +222,11 @@ export default class CustomComponent extends Component<{}, State> {
       </Row>
       </Container>
   )
+
+  minuteFormater(value)
+  {
+    return value + " minut";
+  }
 
   getColorByValue(value)
   {
@@ -248,7 +252,7 @@ export default class CustomComponent extends Component<{}, State> {
 
   getStops(stop_id) {
     console.log('loading stop')
-    fetch('http://localhost:3000/getStopForTrip/' + stop_id
+    fetch('http://'+ host +':3000/getStopForTrip/' + stop_id
     ).then(response => response.json())
       .then(items => this.addStopsOnMap(items))
       .catch(err => console.log(err))
@@ -258,14 +262,15 @@ export default class CustomComponent extends Component<{}, State> {
   addStopsOnMap(stop_json) {
     var stops = [];
     stop_json.forEach(stop => {
-      stops.push({ key: stop['stop_id'], position: [stop['latitude'], stop['longitude']], content: { name: stop['name'], zone_id: stop['zone_id'], wheelchair_acc: stop['wheelchair_acc'] } })
+      stops.push({ key: stop['stop_id'], position: [stop['latitude'], stop['longitude']], content: { name: stop['name'], zone_id: stop['zone_id'], wheelchair_acc: stop['wheelchair_acc'],
+       arival_time : stop['arival_time'], departure_time : stop['departure_time'], avg_delay : stop["sum_delay"], sequence : stop['sequence'] } })
     });
     this.setState({ stops });
   }
 
   getRoute(trip_id) {
     console.log('loading route')
-    fetch('http://localhost:3000/getRouteForTrip/' + trip_id)
+    fetch('http://'+ host +':3000/getRouteForTrip/' + trip_id)
       .then(response => response.json())
       .then(items => this.processRoute(items))
       .catch(err => console.log(err))
@@ -273,9 +278,25 @@ export default class CustomComponent extends Component<{}, State> {
 
   getItems() {
     console.log('loading items');
-    fetch('http://localhost:3000/getLastVehiclePositions')
+    fetch('http://'+ host +':3000/getLastVehiclePositions')
       .then(response => response.json())
       .then(items => this.itemsToMarkers(items))
+      .catch(err => console.log(err))
+  }
+
+  getLastTripData(trip_id){
+    console.log('loading trip data');
+    fetch('http://'+ host +':3000/getLastTripData/' + trip_id)
+      .then(response => response.json())
+      .then(items => this.setState({ selected_trip_data : items[0]}))
+      .catch(err => console.log(err))
+  }
+
+  getTripStats(trip_id){
+    console.log('loading trip data');
+    fetch('http://'+ host +':3000/getTripStats/' + trip_id)
+      .then(response => response.json())
+      .then(items => this.setState({ selected_trip_stats : items}))
       .catch(err => console.log(err))
   }
 
@@ -304,7 +325,8 @@ export default class CustomComponent extends Component<{}, State> {
     dockVisible = true;
     this.getRoute(selected_trip);
     this.getStops(selected_trip);
-
+    this.getLastTripData(selected_trip);
+    this.getTripStats(selected_trip);
     this.setState({ dockVisible, vehiclesHidden, selected_trip, mapCenter, zoomLevel:15 });
 
     console.log(`Clicked at`)
@@ -317,7 +339,10 @@ export default class CustomComponent extends Component<{}, State> {
     var dockVisible = false;
     var vehiclesHidden = false;
     var selected_trip = "";
-    this.setState({ stops, route, dockVisible, vehiclesHidden, selected_trip, zoomLevel:11 })
+    var selected_trip_data = {};
+    var selected_trip_stops = {};
+    //var selected_trip_stats = {};
+    this.setState({ stops, route, dockVisible, vehiclesHidden, selected_trip, zoomLevel:11, selected_trip_data, selected_trip_stops })
   }
 
   render() {
