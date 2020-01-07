@@ -5,7 +5,7 @@ import App from './App';
 import * as serviceWorker from './serviceWorker';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'react-leaflet-markercluster/dist/styles.min.css'; // sass
-
+import '../src/menu.css'
 
 ReactDOM.render(<App />, document.getElementById('root'));
 

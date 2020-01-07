@@ -54,29 +54,34 @@ const getLastTripData = (req, res, db) => {
 
 const processStats = (stats) => 
 {
-  return [
+  var ret = [
     {
-      name: 'Pondělí', delay: Number(stats.monday_delay)
+      name: 'Pondělí', delay: 0
     },
     {
-      name: 'Úterý', delay: Number(stats.tuesday_delay)
+      name: 'Úterý', delay: 0
     },
     {
-      name: 'Středa', delay: Number(stats.wednesday_delay)
+      name: 'Středa', delay: 0
     },
     {
-      name: 'Čtvrtek', delay: Number(stats.thursday_delay)
+      name: 'Čtvrtek', delay: 0
     },
     {
-      name: 'Pátek', delay: Number(stats.friday_delay)
+      name: 'Pátek', delay: 0
     },
     {
-      name: 'Sobota', delay: Number(stats.saturday_delay)
+      name: 'Sobota', delay: 0
     },
     {
-      name: 'Neděle', delay: Number(stats.sunday_delay)
+      name: 'Neděle', delay: 0
     },
   ];
+  for(i = 0; i < stats.rows.length; i++)
+  {
+    ret[stats.rows[i].day_nr-1].delay = Number(stats.rows[i].avg_delay);
+  }
+  return ret;
 }
 
 /*
@@ -138,16 +143,49 @@ const getTripStats = (req, res, db) => {
   db.raw('SELECT * FROM "Trip_delay" where trip_id = \'' + trip_id + '\';')
     .then(items => {
       if(items.rows.length > 0){
-        res.json(processStats(items.rows[0]))
+        res.json(processStats(items))
       } else {
-        res.json(processEmptyStats(items.rows[0]))
+        res.json(processEmptyStats(items))
       }
     })
     .catch(err => res.status(400).json({dbError: 'db error'}))
 }
 
 
+const fixStats = (stats) =>
+{
+  for(var i = 0; i < stats.length; i++)
+  {
+    stats[i].avg=Number(Number(stats[i].avg).toFixed(2));
+  }
+  return stats;
+}
 
+const getHistogramStats = (req, res, db) => {
+  //const { trip_id } = req.params
+  db.raw('select avg(delay_stop_departure), extract(hour from timestamp) as hour from "Vehicle_positions" group by extract(hour from timestamp);')
+    .then(items => {
+      if(items.rows.length > 0){
+        res.json(fixStats(items.rows))
+      } else {
+        res.json(processEmptyStats(items))
+      }
+    })
+    .catch(err => res.status(400).json({dbError: 'db error'}))
+}
+
+const getHistogramStatsByDay = (req, res, db) => {
+  //const { trip_id } = req.params
+  db.raw('select avg(delay_stop_departure), extract(isodow from timestamp) as day from "Vehicle_positions" group by extract(isodow from timestamp);')
+    .then(items => {
+      if(items.rows.length > 0){
+        res.json(fixStats(items.rows))
+      } else {
+        res.json(processEmptyStats(items))
+      }
+    })
+    .catch(err => res.status(400).json({dbError: 'db error'}))
+}
 
 
 const getVehicleInfo = (req, res, db) => {
@@ -226,12 +264,9 @@ const getStopForTrip = (req, res, db) => {
     .catch(err => res.status(400).json({dbError: 'db error'}))
 }
 
-const getNextPrevStop = (req, res, db) => {
+const getStops_delays = (req, res, db) => {
   const { trip_id } = req.params
-  db.raw('select * \
-  FROM "stop_time" as a join "Stop" as b on a.stop_id=b.stop_id \
-  where trip_id = \'' + trip_id + '\'\ \
-  ORDER BY "sequence" ASC')
+  db.raw('SELECT * FROM "Trip_sections" WHERE trip_id=\'' + trip_id + '\' ORDER BY "sequence" ASC;')
     .then(items => {
       if(items.rows.length > 0){
         res.json(items.rows)
@@ -241,6 +276,24 @@ const getNextPrevStop = (req, res, db) => {
     })
     .catch(err => res.status(400).json({dbError: 'db error'}))
 }
+
+const getBadSections = (req, res, db) => {
+  const { trip_id } = req.params
+  db.raw('select b.name as source, c.name as destination, avg_delay FROM public."Trip_sections" as a join "Stop" as b on a.source=b.stop_id join "Stop" as c on a.destination=c.stop_id \
+  WHERE avg_delay is not null \
+  ORDER BY avg_delay DESC LIMIT 100;')
+    .then(items => {
+      if(items.rows.length > 0){
+        res.json(items.rows)
+      } else {
+        res.json({dataExists: 'false'})
+      }
+    })
+    .catch(err => res.status(400).json({dbError: 'db error'}))
+}
+
+
+
 
 const postTableData = (req, res, db) => {
   const { first, last, email, phone, location, hobby } = req.body
@@ -284,5 +337,9 @@ module.exports = {
   putTableData,
   deleteTableData,
   getLastTripData,
-  getTripStats
+  getTripStats,
+  getStops_delays,
+  getHistogramStats,
+  getHistogramStatsByDay,
+  getBadSections
 }

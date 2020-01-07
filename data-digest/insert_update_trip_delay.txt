@@ -1,0 +1,4 @@
+INSERT INTO public."Trip_delay"(
+		trip_id, day_nr, avg_delay, cnt)
+		VALUES ('381_282_190701', extract(isodow from date '2019-08-12T19:58:36.000Z'), 101, 1) ON CONFLICT (trip_id,day_nr) DO UPDATE 
+	  SET avg_delay = (101 + "Trip_delay".cnt * "Trip_delay".avg_delay)/("Trip_delay".cnt+1), cnt = "Trip_delay".cnt+1 ;

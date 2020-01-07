@@ -1,0 +1,5 @@
+UPDATE public."Trip_sections"
+		SET last_delay=1,
+		avg_delay = case when avg_delay is null then 101 else (1+("Trip_sections".delay_counter*"Trip_sections".avg_delay))/("Trip_sections".delay_counter+1) end,
+		delay_counter = case when delay_counter is null then 1 else delay_counter+1 end
+		WHERE trip_id='381_282_190701' and destination='U286Z72';

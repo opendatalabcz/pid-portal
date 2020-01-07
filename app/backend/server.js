@@ -23,7 +23,7 @@ const morgan = require('morgan') // logs requests
 var db = require('knex')({
   client: 'pg',
   connection: {
-    host : '10.0.0.4',
+    host : '10.0.0.8',
     user : 'postgres',
     password : 'passwd',
     database : 'pid-portal'
@@ -63,6 +63,11 @@ app.get('/getRoute/:route_id', (req, res) => main.getRoute(req, res, db))
 app.get('/getStop/:stop_id', (req, res) => main.getStop(req, res, db))
 app.get('/getStopForTrip/:trip_id', (req, res) => main.getStopForTrip(req, res, db))
 app.get('/getVehicleInfo/:vehicle_id', (req, res) => main.getVehicleInfo(req, res, db))
+app.get('/getStopDelays/:trip_id', (req, res) => main.getStops_delays(req, res, db))
+app.get('/getHistogramStats/', (req, res) => main.getHistogramStats(req, res, db))
+app.get('/getHistogramStatsByDay/', (req, res) => main.getHistogramStatsByDay(req, res, db))
+app.get('/getBadSections/', (req, res) => main.getBadSections(req, res, db))
+
 //app.put('/crud', (req, res) => main.putTableData(req, res, db))
 //app.delete('/crud', (req, res) => main.deleteTableData(req, res, db))
 

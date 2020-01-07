@@ -9,6 +9,7 @@
     "prop-types": "^15.7.2",
     "react": "^16.9.0",
     "react-bootstrap": "^1.0.0-beta.16",
+    "react-burger-menu": "^2.6.13",
     "react-dock": "^0.2.4",
     "react-dom": "^16.9.0",
     "react-leaflet": "^2.6.0",

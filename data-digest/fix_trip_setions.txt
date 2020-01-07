@@ -1,0 +1,6 @@
+  UPDATE public."Trip_sections"
+		SET last_delay=delay_stop_departure,
+		avg_delay = case when avg_delay is null then delay_stop_departure else (delay_stop_departure+("Trip_sections".delay_counter*"Trip_sections".avg_delay))/("Trip_sections".delay_counter+1) end,
+		delay_counter = case when delay_counter is null then 1 else delay_counter+1 end
+		from "Vehicle_position" as VP
+		WHERE "Trip_sections".trip_id=VP.trip_id and destination=VP.next_stop_id and delay_stop_departure is not null;

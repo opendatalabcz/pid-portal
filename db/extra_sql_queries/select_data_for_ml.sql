@@ -1,0 +1,3 @@
+select calculated_delay, delay_stop_departure, delay_stop_arrival, timestamp, extract(isodow from timestamp) as day_of_week, a.trip_id, speed, distance_traveled, next_stop_id, c.avg_delay as day_delay, b.last_delay as section_last_delay,
+b.avg_delay as section_avg_delay
+from "Vehicle_position" as a join "Trip_sections" as b on a.trip_id=b.trip_id and a.next_stop_id=b.destination join "Trip_delay" as c on c.trip_id=a.trip_id and c.day_nr=extract(isodow from timestamp)
