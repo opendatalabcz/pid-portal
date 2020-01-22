@@ -14,12 +14,12 @@ cur = conn.cursor()
 def insert_vehicle_positions(folder):
     entries = []
     i = 0
-    for entry in os.scandir('{}/vehicle_position_test/'.format(folder)):
+    for entry in os.scandir('{}/vehicle_position/'.format(folder)):
         if entry.is_file():
             #data = digest(entry)
             # break
             print('Now working on file: {}'.format(entry))
-            insert_single_file(digest(entry))
+            insert_single_file(digest(entry), folder)
             conn.commit()
 
 
@@ -151,7 +151,8 @@ if __name__ == '__main__':
     if len(sys.argv) < 1:
         print('Missing argument data folder')
         print('Correct usage is python3 digestor.py $data_folder')
-        print('$data_folder is path to folder with following subfolders "vehicle_positions", "stops", "trips", "shapes"')
+        print('$data_folder is path to folder with following subfolders "vehicle_positions", "stops", "trips", "routes", "stop_times", "model"')
+        print('for predictions the folder "model" has to contain prelearned prediction model dumped by pickle with filename "model.model"')
         exit(1)
     insert_vehicle_positions(sys.argv[0])
     insert_routes(sys.argv[0])

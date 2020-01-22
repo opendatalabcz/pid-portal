@@ -1,3 +1,7 @@
+import pickle
+import datetime
+import dateutil.parser
+
 def digest(file):
     f = open(file, 'r')
     raw_data = f.read()
@@ -32,14 +36,49 @@ def convert_unix_to_date(unix_ts):
         return unix_ts
 
 
-def insert_single_file(entry):
+def get_trip_delay(trip_id, day):
+    cur.execute(""" 
+    select avg_delay from "Trip_delay" where trip_id='{}' and day_nr={}
+    """.format(trip_id, day))
+    ret_val = cur.fetchone()
+    if ret_val is None:
+        return 0.0
+    return ret_val
+
+
+def get_section_delays(trip_id, next_stop):
+    cur.execute(""" 
+    select avg_delay, last_delay from "Trip_sections" where trip_id='{}' and destination='{}'
+    """.format(trip_id, next_stop))
+    ret_val = cur.fetchone()
+    if ret_val is None:
+        return (0.0, 0.0)
+    return ret_val
+
+
+def do_prediction(data, model):
+    if model is None:
+        return 0   
+    date = dateutil.parser.parse(convert_unix_to_date(data['properties']['last_position']['origin_timestamp']))
+    day_nr = date.weekday()+1
+    section_delays = get_section_delays(data['properties']['trip']['gtfs_trip_id'], data['properties']['last_position']['gtfs_next_stop_id'])
+    X = [data['properties']['last_position']['delay'], data['properties']['last_position']['delay_stop_departure'], date.hour, date.minute, day_nr, data['properties']['last_position']['speed'],
+         data['properties']['last_position']['gtfs_shape_dist_traveled'], get_trip_delay(data['properties']['trip']['gtfs_trip_id'], day_nr), section_delays[1], section_delays[0]]
+    prediction = model.predict(X)
+    return prediction[0]
+
+
+def insert_single_file(entry, folder):
+    file = open('{}/model.model'.format(folder),'rb')
+    model = pickle.load(file)
     i = 0
+    cur.execute("""truncate public."Vehicle_position" CASCADE""")
     for line in entry:
         for data in line['features']:
             cur.execute("""
                 INSERT INTO public."Vehicle_position"(
-                route_id, "timestamp", bearing, calculated_delay, speed, longitude, latitude, vehicle_id, trip_id, is_canceled, next_stop_id, delay_stop_departure, delay_stop_arrival, distance_traveled)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                route_id, "timestamp", bearing, calculated_delay, speed, longitude, latitude, vehicle_id, trip_id, is_canceled, next_stop_id, delay_stop_departure, delay_stop_arrival, distance_traveled, predicted_value)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """,
                (data['properties']['trip']['gtfs_route_id'],convert_unix_to_date(data['properties']['last_position']['origin_timestamp']), 
                 data['properties']['last_position']['bearing'], data['properties']['last_position']['delay'],
@@ -48,8 +87,10 @@ def insert_single_file(entry):
                 data['properties']['last_position']['gtfs_next_stop_id'], 
                 data['properties']['last_position']['delay_stop_departure'],
                 data['properties']['last_position']['delay_stop_arrival'],
-                data['properties']['last_position']['gtfs_shape_dist_traveled']
+                data['properties']['last_position']['gtfs_shape_dist_traveled'], 
+                do_prediction(data, model)
                ))
+            cur.execute(""" insert into public."Vehicle_positions" (select * from public."Vehicle_position") """)
         #trip delays
             if data['properties']['last_position']['delay_stop_departure'] != None:
                 cur.execute("""
