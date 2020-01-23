@@ -227,7 +227,7 @@ $BODY$;
 ALTER FUNCTION public.order_increment()
     OWNER TO postgres;
 
-
+CREATE SEQUENCE "Vehicle_position_order_seq";
 
 -- Table: public."Vehicle_position"
 

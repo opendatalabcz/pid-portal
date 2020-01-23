@@ -1,6 +1,11 @@
 import pickle
 import datetime
 import dateutil.parser
+import sklearn
+import json
+import numpy as np
+
+cur = {}
 
 def digest(file):
     f = open(file, 'r')
@@ -43,7 +48,7 @@ def get_trip_delay(trip_id, day):
     ret_val = cur.fetchone()
     if ret_val is None:
         return 0.0
-    return ret_val
+    return ret_val[0]
 
 
 def get_section_delays(trip_id, next_stop):
@@ -57,27 +62,32 @@ def get_section_delays(trip_id, next_stop):
 
 
 def do_prediction(data, model):
+    
     if model is None:
         return 0   
     date = dateutil.parser.parse(convert_unix_to_date(data['properties']['last_position']['origin_timestamp']))
     day_nr = date.weekday()+1
     section_delays = get_section_delays(data['properties']['trip']['gtfs_trip_id'], data['properties']['last_position']['gtfs_next_stop_id'])
-    X = [data['properties']['last_position']['delay'], data['properties']['last_position']['delay_stop_departure'], date.hour, date.minute, day_nr, data['properties']['last_position']['speed'],
-         data['properties']['last_position']['gtfs_shape_dist_traveled'], get_trip_delay(data['properties']['trip']['gtfs_trip_id'], day_nr), section_delays[1], section_delays[0]]
-    prediction = model.predict(X)
-    return prediction[0]
+    X = np.array([data['properties']['last_position']['delay'], date.hour, date.minute, day_nr, data['properties']['last_position']['speed'],
+         float(data['properties']['last_position']['gtfs_shape_dist_traveled']), get_trip_delay(data['properties']['trip']['gtfs_trip_id'], day_nr), section_delays[1], section_delays[0]])
+    try:
+        prediction = model.predict(X.reshape(1,-1))
+        return prediction[0]
+    except Exception as e:
+        #print(e)
+        return None
 
 
-def insert_single_file(entry, folder):
-    file = open('{}/model.model'.format(folder),'rb')
-    model = pickle.load(file)
+def insert_single_file(entry, model, cur_in):
+    global cur
+    cur = cur_in
     i = 0
     cur.execute("""truncate public."Vehicle_position" CASCADE""")
     for line in entry:
         for data in line['features']:
             cur.execute("""
                 INSERT INTO public."Vehicle_position"(
-                route_id, "timestamp", bearing, calculated_delay, speed, longitude, latitude, vehicle_id, trip_id, is_canceled, next_stop_id, delay_stop_departure, delay_stop_arrival, distance_traveled, predicted_value)
+                route_id, "timestamp", bearing, calculated_delay, speed, longitude, latitude, vehicle_id, trip_id, is_canceled, next_stop_id, delay_stop_departure, delay_stop_arrival, distance_traveled, predicted_delay)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """,
                (data['properties']['trip']['gtfs_route_id'],convert_unix_to_date(data['properties']['last_position']['origin_timestamp']), 
@@ -90,7 +100,7 @@ def insert_single_file(entry, folder):
                 data['properties']['last_position']['gtfs_shape_dist_traveled'], 
                 do_prediction(data, model)
                ))
-            cur.execute(""" insert into public."Vehicle_positions" (select * from public."Vehicle_position") """)
+            
         #trip delays
             if data['properties']['last_position']['delay_stop_departure'] != None:
                 cur.execute("""
@@ -118,4 +128,13 @@ def insert_single_file(entry, folder):
         """, (data['properties']['trip']['cis_vehicle_registration_number'], data['properties']['trip']['vehicle_type'], data['properties']['trip']['cis_agency_name'])
                    )
         i += 1
+    cur.execute("""
+            INSERT INTO 
+            public."Vehicle_positions"(
+	trip_id, latitude, longitude, "timestamp", speed, calculated_delay, bearing, vehicle_id, route_id, delay_stop_departure, delay_stop_arrival, distance_traveled, next_stop_id, is_canceled, predicted_delay)
+	(SELECT 
+    trip_id, latitude, longitude, "timestamp", speed, calculated_delay, bearing, vehicle_id, route_id, delay_stop_departure, delay_stop_arrival, distance_traveled, next_stop_id, is_canceled, predicted_delay
+	FROM 
+    public."Vehicle_position")
+            """)
     print('Executed {} entries for table Vehicle_position'.format(i))

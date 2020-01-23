@@ -16,11 +16,14 @@
 4. dojde postupně ke zpracování a nahrání všech záznamů do databáze
 
 ## Spuštění backendové webové služby
-1. spustíme node server pomocí node ./app/backend/server.js {ip adresa postgreSQL serveru}
+1. přejdeme do složky ./app/backend
+1. nainstalujeme potřebné závislosti pomocí npm install
+2. spustíme node server pomocí node server.js {ip adresa postgreSQL serveru}
 
 ## Spuštění frontend serveru
 1. přejdeme do složky ./app/pid-portal
-2. spustíme příkaz npm start
-3. může se stát že nám backendová služba běží na stejném portu jako frontend,
+2. nainstalujeme potřebné závislosti pomocí npm install
+3. spustíme příkaz npm start
+4. může se stát že nám backendová služba běží na stejném portu jako frontend,
   v tom případě si bude npm stěžovat, ale stačí potvrdit jiný port 
 4. mělo by se otevřít okno prohlížeče s aplikací a měly by se načíst aktuální polohy vozidel z databáze
